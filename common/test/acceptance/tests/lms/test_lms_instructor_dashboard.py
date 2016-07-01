@@ -1052,7 +1052,6 @@ class CertificatesTest(BaseInstructorDashboardTest):
             "ignore": [
                 'aria-valid-attr-value',  # TODO: AC-491
                 'checkboxgroup',  # TODO: AC-491
-                'duplicate-id',  # TODO: AC-491
                 'label',  # TODO: AC-491
                 'radiogroup',  # TODO: AC-491
             ]

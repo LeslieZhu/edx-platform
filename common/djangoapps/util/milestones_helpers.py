@@ -9,6 +9,7 @@ from django.utils.translation import ugettext as _
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
 
+from milestones.services import MilestonesService
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from xmodule.modulestore.django import modulestore
 
@@ -415,11 +416,14 @@ def add_user_milestone(user, milestone):
     return milestones_api.add_user_milestone(user, milestone)
 
 
-def get_service(service):
+def get_milestones_service():
     """
-    Wrapper for milestones service to get requested service
-    if feature flag is enabled
+    Returns MilestonesService instance if feature flag enabled;
+    else returns None.
+
+    Note: MilestonesService only has access to the functions
+    explicitly requested in the MilestonesServices class
     """
     if not settings.FEATURES.get('MILESTONES_APP', False):
         return None
-    return getattr(sys.modules[__name__], service, None)
+    return MilestonesService(sys.modules[__name__])

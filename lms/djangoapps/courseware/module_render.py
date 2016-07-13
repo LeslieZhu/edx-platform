@@ -21,6 +21,7 @@ from django.http import Http404, HttpResponse
 from django.test.client import RequestFactory
 from django.views.decorators.csrf import csrf_exempt
 from edx_proctoring.services import ProctoringService
+from milestones.services import MilestonesService
 from eventtracking import tracker
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import UsageKey, CourseKey
@@ -749,6 +750,7 @@ def get_module_system_for_user(user, student_data,  # TODO  # pylint: disable=to
             'user': DjangoXBlockUserService(user, user_is_staff=user_is_staff),
             "reverification": ReverificationService(),
             'proctoring': ProctoringService(),
+            'milestones': MilestonesService(),
             'credit': CreditService(),
             'bookmarks': BookmarksService(user=user),
         },

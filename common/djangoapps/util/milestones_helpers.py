@@ -2,7 +2,7 @@
 """
 Utility library for working with the edx-milestones app
 """
-
+import sys
 from django.conf import settings
 from django.utils.translation import ugettext as _
 
@@ -413,3 +413,13 @@ def add_user_milestone(user, milestone):
         return None
     from milestones import api as milestones_api
     return milestones_api.add_user_milestone(user, milestone)
+
+
+def get_service(service):
+    """
+    Wrapper for milestones service to get requested service
+    if feature flag is enabled
+    """
+    if not settings.FEATURES.get('MILESTONES_APP', False):
+        return None
+    return getattr(sys.modules[__name__], service, None)

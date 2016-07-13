@@ -129,6 +129,7 @@ class ProctoringFields(object):
 
 
 @XBlock.wants('proctoring')
+@XBlock.wants('milestones')
 @XBlock.wants('credit')
 @XBlock.needs("user")
 @XBlock.needs("bookmarks")
@@ -253,7 +254,7 @@ class SequenceModule(SequenceFields, ProctoringFields, XModule):
             'next_url': context.get('next_url'),
             'prev_url': context.get('prev_url'),
             'override_hidden_exam': masquerading and special_exam_html is not None,
-            'gated': milestones_api.get_course_content_milestones(
+            'gated': self.runtime.service(self, 'milestones').get_course_content_milestones(
                 self.course_id, self.location, 'requires'
             ) and context.get('staff_access', False),
         }

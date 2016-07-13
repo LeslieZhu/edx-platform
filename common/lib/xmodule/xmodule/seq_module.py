@@ -9,7 +9,6 @@ import logging
 from pkg_resources import resource_string
 
 from lxml import etree
-from milestones import api as milestones_api
 from xblock.core import XBlock
 from xblock.fields import Integer, Scope, Boolean, String
 from xblock.fragment import Fragment
@@ -250,7 +249,6 @@ class SequenceModule(SequenceFields, ProctoringFields, XModule):
             content_milestones = milestones_service.get_course_content_milestones(
                 self.course_id, self.location, 'requires'
             )
-
 
         params = {
             'items': contents,

@@ -66,7 +66,6 @@ from student.models import anonymous_id_for_user, user_by_anonymous_id
 from student.roles import CourseBetaTesterRole
 from util import milestones_helpers
 from util.json_request import JsonResponse
-from util.milestones_helpers import get_milestones_service
 from util.model_utils import slugify
 from util.sandboxing import can_execute_unsafe_code, get_python_lib_zip
 from xblock.runtime import KvsFieldData
@@ -750,7 +749,7 @@ def get_module_system_for_user(user, student_data,  # TODO  # pylint: disable=to
             'user': DjangoXBlockUserService(user, user_is_staff=user_is_staff),
             "reverification": ReverificationService(),
             'proctoring': ProctoringService(),
-            'milestones': get_milestones_service(),
+            'milestones': milestones_helpers.get_service(),
             'credit': CreditService(),
             'bookmarks': BookmarksService(user=user),
         },

@@ -260,7 +260,7 @@ class SequenceModule(SequenceFields, ProctoringFields, XModule):
             'next_url': context.get('next_url'),
             'prev_url': context.get('prev_url'),
             'override_hidden_exam': masquerading and special_exam_html is not None,
-            'gated': content_milestones and self.runtime.user_is_staff,
+            'gated_banner': content_milestones and self.runtime.user_is_staff,
         }
 
         fragment.add_content(self.system.render_template("seq_module.html", params))

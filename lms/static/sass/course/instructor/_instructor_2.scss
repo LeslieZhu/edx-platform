@@ -2353,37 +2353,49 @@ input[name="subject"] {
 
 // Custom File upload
 .customBrowseBtn {
-  margin: ($baseline/2) 0;
-  display: inline-block;
-  .file-browse {
-    position: relative;
+    margin: ($baseline/2) 0;
+    display: inline-block;
     overflow: hidden;
-    display: inline;
-    @include margin-left(-5px);
-    span.browse {
-      @include button(simple, $uxpl-blue-base);
-      @include margin-right($baseline);
-      padding: 6px ($baseline/2);
-      font-size: 12px;
-      border-radius: 0 3px 3px 0;
+    vertical-align: bottom;
+  
+    .file-browse {
+        @include margin-left(-4px);
+        position: relative;
+        overflow: hidden;
+        display: inline;
+
+        .browse {
+            @include button(simple, $uxpl-blue-base);
+            @include margin-right($baseline);
+            padding: 6px ($baseline/2);
+            font-size: 12px;
+            border-radius: 0 3px 3px 0;
+        }
+
+        .file_field {
+            @include right(20px);
+            position: absolute;
+            z-index: 3;
+            top: -1px;
+            height: 24px; // To match bull browse button
+            width: 418px;
+            margin: 0;
+            padding: 4px 0 0 0;
+            cursor: pointer;
+        }
     }
-    input.file_field {
-      @extend %cont-text-sr;
-      position: absolute;
-      @include right(0);
-      top: 0;
-      margin: 0;
-      padding: 0;
-      cursor: pointer;
+  
+    #browseFile,
+    #bulk-exception-upload {
+        @include border-radius(4px 0 0 4px);
+        @include padding(23px 6px 5px);
+        position: relative;
+        z-index: 2;
+        display: inline-block;
+        width: 250px;
+        vertical-align: middle;
+        border: 1px solid $lightGrey1;
+        background: $white;
+        cursor: not-allowed;
     }
-  }
-  & > span, & input[disabled] {
-    vertical-align: middle;
-  }
-  input[disabled] {
-    @include border-radius(4px 0 0 4px);
-    @include padding(6px 6px 5px);
-    border: 1px solid $lightGrey1;
-    cursor: not-allowed;
-  }
 }

@@ -8,6 +8,10 @@ from edx_proctoring.api import get_attempt_status_summary
 from edx_proctoring.models import ProctoredExamStudentAttemptStatus
 from openedx.core.lib.block_structure.transformer import BlockStructureTransformer, FilteringTransformerMixin
 from util import milestones_helpers
+from student.roles import (
+    CourseStaffRole,
+    OrgStaffRole,
+)
 
 
 class MilestonesTransformer(FilteringTransformerMixin, BlockStructureTransformer):
@@ -35,39 +39,57 @@ class MilestonesTransformer(FilteringTransformerMixin, BlockStructureTransformer
         block_structure.request_xblock_fields('is_practice_exam')
 
     def transform_block_filters(self, usage_info, block_structure):
-        if not settings.FEATURES.get('ENABLE_PROCTORED_EXAMS', False):
-            return [block_structure.create_universal_filter()]
-        # this needs to change ^^^
+        def user_gated_from_block(block_key):
+            """
+            Checks whether the user is gated from accessing this block, first via exam proctoring, then via a general
+            milestones check.
+            """
+            return self.is_proctored_exam(block_key, usage_info, block_structure) or \
+                self.has_pending_milestones_for_user(block_key, usage_info)
 
-        def has_milestones_for_user(block_key):
-            """
-            Test whether the block is a proctored exam for the user in
-            question, or requires any other unfulfilled milestones.
-            """
-            if (
-                    block_key.block_type == 'sequential' and (
-                        block_structure.get_xblock_field(block_key, 'is_proctored_enabled') or
-                        block_structure.get_xblock_field(block_key, 'is_practice_exam')
-                    )
-            ):
-                # This section is an exam.  It should be excluded unless the
-                # user is not a verified student or has declined taking the exam.
-                user_exam_summary = get_attempt_status_summary(
-                    usage_info.user.id,
-                    unicode(block_key.course_key),
-                    unicode(block_key),
+        return [block_structure.create_removal_filter(user_gated_from_block)]
+
+    @staticmethod
+    def is_proctored_exam(block_key, usage_info, block_structure):
+        """
+        Test whether the block is a special exam for the user in
+        question.
+        """
+        if (
+                block_key.block_type == 'sequential' and (
+                    block_structure.get_xblock_field(block_key, 'is_proctored_enabled') or
+                    block_structure.get_xblock_field(block_key, 'is_practice_exam')
                 )
-                exam_is_proctored = user_exam_summary and \
-                    user_exam_summary['status'] != ProctoredExamStudentAttemptStatus.declined
+        ):
+            # This section is an exam.  It should be excluded unless the
+            # user is not a verified student or has declined taking the exam.
+            user_exam_summary = get_attempt_status_summary(
+                usage_info.user.id,
+                unicode(block_key.course_key),
+                unicode(block_key),
+            )
+            return settings.FEATURES.get('ENABLE_SPECIAL_EXAMS', False) and user_exam_summary \
+                and user_exam_summary['status'] != ProctoredExamStudentAttemptStatus.declined
+        else:
+            return False
 
-                # after checking for proctored, we check for all other milestones
-                # if we need additional fields bump up version number
-                milestones_exist_for_exam = bool(milestones_helpers.get_course_content_milestones(
-                    unicode(block_key.course_key),
-                    unicode(block_key),
-                    'requires',
-                    usage_info.user.id
-                ))
-                return exam_is_proctored or milestones_exist_for_exam
+    @staticmethod
+    def has_pending_milestones_for_user(block_key, usage_info):
+        """
+        Test whether the current user has any unfulfilled milestones preventing
+        them from accessing this block.
+        """
+        return bool(milestones_helpers.get_course_content_milestones(
+            unicode(block_key.course_key),
+            unicode(block_key),
+            'requires',
+            usage_info.user.id
+        ))
 
-        return [block_structure.create_removal_filter(has_milestones_for_user)]
+    @staticmethod
+    def has_staff_access_to_course(block_key, usage_info):
+        """
+        Tests whether the current user has staff access to the block being passed in.
+        """
+        return CourseStaffRole(block_key).has_user(usage_info.user) \
+            or OrgStaffRole(block_key.org).has_user(usage_info.user)

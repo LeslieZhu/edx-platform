@@ -20,11 +20,17 @@ from ..milestones import MilestonesTransformer
 from ...api import get_course_blocks
 from openedx.core.lib.gating import api as gating_api
 from milestones.tests.utils import MilestonesTestCaseMixin
+from student.roles import (
+    CourseStaffRole,
+    OrgStaffRole,
+    CourseInstructorRole,
+    OrgInstructorRole
+)
 
 
 @attr('shard_3')
 @ddt.ddt
-@patch.dict('django.conf.settings.FEATURES', {'ENABLE_PROCTORED_EXAMS': True, 'MILESTONES_APP': True})
+@patch.dict('django.conf.settings.FEATURES', {'ENABLE_SPECIAL_EXAMS': True, 'MILESTONES_APP': True})
 class MilestonesTransformerTestCase(CourseStructureTestCase, MilestonesTestCaseMixin):
     """
     Test behavior of ProctoredExamTransformer
@@ -78,7 +84,7 @@ class MilestonesTransformerTestCase(CourseStructureTestCase, MilestonesTestCaseM
         gating_api.add_prerequisite(self.course.id, unicode(gating_block.location))
         gating_api.set_required_content(self.course.id, gated_block.location, gating_block.location, 100)
 
-    ALL_BLOCKS = ('course', 'A', 'B', 'C', 'TimedExam', 'D', 'E', 'PracticeExam', 'F', 'G')
+    ALL_BLOCKS = ('course', 'A', 'B', 'C', 'TimedExam', 'D', 'E', 'PracticeExam', 'F', 'G', 'NotASpecialExam', 'H')
 
     def get_course_hierarchy(self):
         """
@@ -131,6 +137,13 @@ class MilestonesTransformerTestCase(CourseStructureTestCase, MilestonesTestCaseM
                     {'#type': 'vertical', '#ref': 'G'},
                 ],
             },
+            {
+                '#type': 'sequential',
+                '#ref': 'NotASpecialExam',
+                '#children': [
+                    {'#type': 'vertical', '#ref': 'H'},
+                ],
+            },
         ]
 
     def test_exam_not_created(self):
@@ -153,12 +166,12 @@ class MilestonesTransformerTestCase(CourseStructureTestCase, MilestonesTestCaseM
         (
             'TimedExam',
             ProctoredExamStudentAttemptStatus.submitted,
-            ('course', 'A', 'B', 'C', 'PracticeExam', 'F', 'G'),
+            ('course', 'A', 'B', 'C', 'PracticeExam', 'F', 'G', 'NotASpecialExam', 'H'),
         ),
         (
             'TimedExam',
             ProctoredExamStudentAttemptStatus.rejected,
-            ('course', 'A', 'B', 'C', 'PracticeExam', 'F', 'G'),
+            ('course', 'A', 'B', 'C', 'PracticeExam', 'F', 'G', 'NotASpecialExam', 'H'),
         ),
         (
             'PracticeExam',
@@ -168,7 +181,7 @@ class MilestonesTransformerTestCase(CourseStructureTestCase, MilestonesTestCaseM
         (
             'PracticeExam',
             ProctoredExamStudentAttemptStatus.rejected,
-            ('course', 'A', 'B', 'C', 'TimedExam', 'D', 'E'),
+            ('course', 'A', 'B', 'C', 'TimedExam', 'D', 'E', 'NotASpecialExam', 'H'),
         ),
     )
     @ddt.unpack
@@ -184,9 +197,54 @@ class MilestonesTransformerTestCase(CourseStructureTestCase, MilestonesTestCaseM
             set(self.get_block_key_set(self.blocks, *expected_blocks)),
         )
 
-    def test_exam_gated(self):
-        expected_blocks = ('course', 'A', 'B', 'C', 'TimedExam', 'D', 'E')
+    def test_special_exam_gated(self):
+        expected_blocks = ('course', 'A', 'B', 'C', 'TimedExam', 'D', 'E', 'NotASpecialExam', 'H')
         self.setup_gated_section(self.blocks['PracticeExam'], self.blocks['TimedExam'])
+        block_structure = get_course_blocks(
+            self.user,
+            self.course.location,
+            self.transformers,
+        )
+        self.assertEqual(
+            set(block_structure.get_block_keys()),
+            set(self.get_block_key_set(self.blocks, *expected_blocks)),
+        )
+
+    def test_not_special_exam_gated(self):
+        expected_blocks = ('course', 'A', 'B', 'C', 'TimedExam', 'D', 'E', 'PracticeExam', 'F', 'G')
+        self.setup_gated_section(self.blocks['NotASpecialExam'], self.blocks['TimedExam'])
+        block_structure = get_course_blocks(
+            self.user,
+            self.course.location,
+            self.transformers,
+        )
+        self.assertEqual(
+            set(block_structure.get_block_keys()),
+            set(self.get_block_key_set(self.blocks, *expected_blocks)),
+        )
+
+    @ddt.data(CourseStaffRole, OrgStaffRole, CourseInstructorRole, OrgInstructorRole)
+    def test_staff_access_gated(self, user_role):
+        expected_blocks = ('course', 'A', 'B', 'C', 'TimedExam', 'D', 'E', 'NotASpecialExam', 'H')
+        role = user_role(self.course.id)
+        role.add_users(self.user)
+        self.setup_gated_section(self.blocks['PracticeExam'], self.blocks['TimedExam'])
+        block_structure = get_course_blocks(
+            self.user,
+            self.course.location,
+            self.transformers,
+        )
+        self.assertEqual(
+            set(block_structure.get_block_keys()),
+            set(self.get_block_key_set(self.blocks, *expected_blocks)),
+        )
+
+    @ddt.data(CourseStaffRole, OrgStaffRole, CourseInstructorRole, OrgInstructorRole)
+    def test_staff_access_proctored(self, user_role):
+        expected_blocks = ('course', 'A', 'B', 'C', 'PracticeExam', 'F', 'G', 'NotASpecialExam', 'H')
+        role = user_role(self.course.id)
+        role.add_users(self.user)
+        self.setup_proctored_exam(self.blocks['TimedExam'], ProctoredExamStudentAttemptStatus.rejected, self.user.id)
         block_structure = get_course_blocks(
             self.user,
             self.course.location,

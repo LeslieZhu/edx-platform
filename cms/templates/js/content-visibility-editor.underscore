@@ -11,13 +11,13 @@
         <li class="field-radio">
             <label class="label">
                 <input class="input input-radio" name="content-visibility" type="radio" value="hide_after_due">
-                <%- gettext('Hide contents but not grades from students after due date') %>
+                <%- gettext('Hide content but not grades from students after due date') %>
             </label>
         </li>
         <li class="field-radio">
             <label class="label">
                 <input class="input input-radio" name="content-visibility" type="radio" value="visible">
-                <%- gettext('Always show to students') %>
+                <%- gettext('Always show to students (Default)') %>
             </label>
         </li>
     </ul>
